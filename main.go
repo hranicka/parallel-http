@@ -2,10 +2,10 @@ package main
 
 import (
 	"bytes"
+	"flag"
 	"fmt"
-	"io/ioutil"
 	"net/http"
-	"os"
+	"strings"
 	"sync"
 )
 
@@ -13,33 +13,42 @@ type req struct {
 	method  string
 	url     string
 	headers map[string]string
-	content []byte
+	body    []byte
 }
 
 func main() {
-	repeats := 5
+	u := flag.String("u", "", "request URL")
+	b := flag.String("b", "", "request body")
+	m := flag.String("m", "POST", "HTTP method (PUT, POST, PATCH, GET, ...)")
+	p := flag.Int("p", 10, "count of parallel requests")
+	h := flag.String("h", "Content-Type: application/json", "request headers, multiple separated by \\n")
+	flag.Parse()
 
+	// validate flags
+	if *u == "" || *b == "" {
+		flag.Usage()
+		return
+	}
+
+	// build request
 	var r req
-	r.method = "PATCH"
-	r.url = "http://localhost/v1/"
-	r.headers = map[string]string{
-		"Content-Type": "application/json",
-		"X-Origin":     "test",
-	}
+	r.method = *m
+	r.url = *u
+	r.body = []byte(*b)
 
-	if f, err := os.Open("content.json"); err != nil {
-		panic(err)
-	} else {
-		r.content, err = ioutil.ReadAll(f)
-		if err != nil {
-			panic(err)
+	r.headers = make(map[string]string)
+	for _, h := range strings.Split(*h, "\\n") {
+		kv := strings.Split(h, ":")
+		if len(kv) != 2 {
+			flag.Usage()
+			return
 		}
+		r.headers[kv[0]] = kv[1]
 	}
 
-	fmt.Printf("repeats: %d\n", repeats)
-
+	// fire parallel requests
 	wg := sync.WaitGroup{}
-	for i := 0; i < repeats; i++ {
+	for i := 0; i < *p; i++ {
 		wg.Add(1)
 		go func(r req) {
 			doRequest(r)
@@ -52,7 +61,7 @@ func main() {
 func doRequest(r req) {
 	client := &http.Client{}
 
-	req, err := http.NewRequest(r.method, r.url, bytes.NewReader(r.content))
+	req, err := http.NewRequest(r.method, r.url, bytes.NewReader(r.body))
 	if err != nil {
 		panic(err)
 	}
