@@ -17,6 +17,10 @@ type req struct {
 	body    []byte
 }
 
+var (
+	client = &http.Client{}
+)
+
 func main() {
 	u := flag.String("u", "", "request URL")
 	b := flag.String("b", "", "request body")
@@ -53,26 +57,26 @@ func main() {
 	for i := 0; i < *p; i++ {
 		wg.Add(1)
 		go func(r req) {
-			doRequest(r, *debug)
+			if err := doRequest(r, *debug); err != nil {
+				fmt.Printf("error: %s\n", err)
+			}
 			wg.Done()
 		}(r)
 	}
 	wg.Wait()
 }
 
-func doRequest(r req, debug bool) {
-	client := &http.Client{}
-
+func doRequest(r req, debug bool) error {
 	req, err := http.NewRequest(r.method, r.url, bytes.NewReader(r.body))
 	if err != nil {
-		panic(err)
+		return err
 	}
 	for k, v := range r.headers {
 		req.Header.Add(k, v)
 	}
 	resp, err := client.Do(req)
 	if err != nil {
-		panic(err)
+		return err
 	}
 	defer resp.Body.Close()
 	fmt.Printf("status: %d\n", resp.StatusCode)
@@ -80,8 +84,9 @@ func doRequest(r req, debug bool) {
 	if debug {
 		b, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
-			panic(err)
+			return err
 		}
 		fmt.Printf(">> body: %s\n", string(b))
 	}
+	return nil
 }
