@@ -43,13 +43,15 @@ func main() {
 	r.body = []byte(*b)
 
 	r.headers = make(map[string]string)
-	for _, h := range strings.Split(*h, "\\n") {
-		kv := strings.Split(h, ":")
-		if len(kv) != 2 {
-			flag.Usage()
-			return
+	if *h != "" {
+		for _, h := range strings.Split(*h, "\\n") {
+			kv := strings.Split(h, ":")
+			if len(kv) != 2 {
+				flag.Usage()
+				return
+			}
+			r.headers[kv[0]] = kv[1]
 		}
-		r.headers[kv[0]] = kv[1]
 	}
 
 	// fire parallel requests
