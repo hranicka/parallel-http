@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"strings"
 	"sync"
+	"time"
 )
 
 type req struct {
@@ -55,6 +56,8 @@ func main() {
 	}
 
 	// fire parallel requests
+	start := time.Now()
+
 	wg := sync.WaitGroup{}
 	for i := 0; i < *p; i++ {
 		wg.Add(1)
@@ -66,6 +69,9 @@ func main() {
 		}(r)
 	}
 	wg.Wait()
+
+	duration := time.Now().Sub(start)
+	fmt.Printf("\nrequests: %d, duration: %dms\n", *p, duration.Milliseconds())
 }
 
 func doRequest(r req, debug bool) error {
