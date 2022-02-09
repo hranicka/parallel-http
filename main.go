@@ -31,7 +31,7 @@ func main() {
 	flag.Parse()
 
 	// validate flags
-	if *u == "" || *b == "" {
+	if *u == "" {
 		flag.Usage()
 		return
 	}
